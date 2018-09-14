@@ -9,6 +9,14 @@ Parameters:
   AvailabilityZone:
     Description: Availability zone to deploy
     Type: AWS::EC2::AvailabilityZone::Name
+  Parameters: 
+    InstanceTypeParameter: 
+      Type: String
+      Default: m5.large
+      AllowedValues: 
+        - m5.large
+        - m5.xlarge
+      Description: Select either m5.large or m5.xlargei as this is in line with the minimum requirements for the Master and Workload Node.
 
 Mappings:
 #########
@@ -68,7 +76,8 @@ Resources:
       Tags:
       - Key: Name
         Value: openshift-master
-      InstanceType: m5.xlarge
+      InstanceType:
+        Ref: InstanceTypeParameter
       KeyName: !Ref KeyName
       AvailabilityZone: !Ref AvailabilityZone
       NetworkInterfaces:
@@ -85,7 +94,8 @@ Resources:
       Tags:
       - Key: Name
         Value: openshift-worker1
-      InstanceType: m5.xlarge
+      InstanceType:
+        Ref: InstanceTypeParameter
       KeyName: !Ref KeyName
       AvailabilityZone: !Ref AvailabilityZone
       NetworkInterfaces:
