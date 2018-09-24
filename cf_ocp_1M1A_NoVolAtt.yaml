@@ -9,20 +9,19 @@ Parameters:
   AvailabilityZone:
     Description: Availability zone to deploy
     Type: AWS::EC2::AvailabilityZone::Name
-  Parameters: 
-    InstanceTypeParameter: 
-      Type: String
-      Default: m5d.large
-      AllowedValues: 
-        - m5d.large
-        - m5d.xlarge
-      Description: Select a instance with storage either m5d.large or m5d.xlarge as this is in line with the minimum requirements for the Master and Workload Node.
+  InstanceTypeParameter: 
+    Type: String
+    Default: m5d.large
+    AllowedValues: 
+      - m5d.large
+      - m5d.xlarge
+    Description: Select an instance with storage as this is in line with the minimum requirements for the Master and Workload Node.
 
 Mappings:
 #########
   RegionMap:
-    ap-southeast-2:
-      rhel75: "ami-67589505"
+    us-east-2:
+      rhel75: "ami-03291866"
 
 Resources:
 ##########
