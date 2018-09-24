@@ -42,6 +42,9 @@ Resources:
 
   internetgatewayos:
     Type: AWS::EC2::InternetGateway
+    Tags:
+      - Key: Name
+        Value: openshift-cf-ig
 
   gatewayattachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -55,11 +58,17 @@ Resources:
       VpcId: !Ref openshiftvpc
       CidrBlock: 10.0.0.0/28
       AvailabilityZone: !Ref AvailabilityZone
+      Tags:
+        - Key: Name
+          Value: openshift-cf-subnet
 
   routetable:
     Type: 'AWS::EC2::RouteTable'
     Properties:
       VpcId: !Ref openshiftvpc
+    Tags:
+      - Key: Name
+        Value: openshift-cf-routetable
 
   subnetroutetableasoc:
     Type: "AWS::EC2::SubnetRouteTableAssociation"
