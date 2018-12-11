@@ -9,19 +9,12 @@ Parameters:
   AvailabilityZone:
     Description: Availability zone to deploy
     Type: AWS::EC2::AvailabilityZone::Name
-  InstanceTypeParameter: 
-    Type: String
-    Default: m5.large
-    AllowedValues: 
-      - m5.large
-      - m5.xlarge
-    Description: Select either m5.large or m5.xlarge as this is in line with the minimum requirements for the Master and Workload Node.
 
 Mappings:
 #########
   RegionMap:
     us-east-2:
-      rhel75: "ami-03291866"
+      rhel75: "ami-0376bbf9be9eac670"
 
 Resources:
 ##########
@@ -32,14 +25,11 @@ Resources:
       EnableDnsSupport: true
       EnableDnsHostnames: true
       Tags:
-      - Key: Name
-        Value: openshift-cf-vpc
+        - Key: Name
+          Value: openshift-cf-vpc
 
   internetgatewayos:
     Type: AWS::EC2::InternetGateway
-    Tags:
-    - Key: Name
-      Value: openshift-cf-ig
 
   gatewayattachment:
     Type: AWS::EC2::VPCGatewayAttachment
@@ -53,17 +43,11 @@ Resources:
       VpcId: !Ref openshiftvpc
       CidrBlock: 10.0.0.0/28
       AvailabilityZone: !Ref AvailabilityZone
-      Tags:
-      - Key: Name
-        Value: openshift-cf-subnet
 
   routetable:
     Type: 'AWS::EC2::RouteTable'
     Properties:
       VpcId: !Ref openshiftvpc
-    Tags:
-      - Key: Name
-        Value: openshift-cf-routetable
 
   subnetroutetableasoc:
     Type: "AWS::EC2::SubnetRouteTableAssociation"
@@ -84,8 +68,7 @@ Resources:
       Tags:
       - Key: Name
         Value: openshift-master
-      InstanceType:
-        Ref: InstanceTypeParameter
+      InstanceType: m5d.large
       KeyName: !Ref KeyName
       AvailabilityZone: !Ref AvailabilityZone
       NetworkInterfaces:
@@ -102,8 +85,7 @@ Resources:
       Tags:
       - Key: Name
         Value: openshift-worker1
-      InstanceType:
-        Ref: InstanceTypeParameter
+      InstanceType: m5d.large
       KeyName: !Ref KeyName
       AvailabilityZone: !Ref AvailabilityZone
       NetworkInterfaces:
@@ -114,33 +96,22 @@ Resources:
              - !Ref workersecgroup
       ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", rhel75]
 
-  volume1:
-    Type: 'AWS::EC2::Volume'
+  openshiftworker2:
+    Type: 'AWS::EC2::Instance'
     Properties:
-      AvailabilityZone: !GetAtt openshiftmaster.AvailabilityZone
-      Size: 50
-    DeletionPolicy: Delete
-
-  volat1:
-    Type: AWS::EC2::VolumeAttachment
-    Properties:
-      Device: '/dev/xvdb'
-      VolumeId: !Ref volume1
-      InstanceId: !Ref openshiftmaster
-
-  volume2:
-    Type: 'AWS::EC2::Volume'
-    Properties:
-      AvailabilityZone: !GetAtt openshiftworker1.AvailabilityZone
-      Size: 50
-    DeletionPolicy: Delete
-
-  volat2:
-    Type: AWS::EC2::VolumeAttachment
-    Properties:
-      Device: '/dev/xvdb'
-      VolumeId: !Ref volume2
-      InstanceId: !Ref openshiftworker1
+      Tags:
+      - Key: Name
+        Value: openshift-worker2
+      InstanceType: m5d.large
+      KeyName: !Ref KeyName
+      AvailabilityZone: !Ref AvailabilityZone
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: "true"
+          DeviceIndex: "0"
+          SubnetId: !Ref subnet
+          GroupSet:
+           - !Ref workersecgroup
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", rhel75]
 
   workersecgroup:
     Type: AWS::EC2::SecurityGroup

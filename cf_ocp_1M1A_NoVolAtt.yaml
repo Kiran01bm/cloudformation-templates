@@ -23,11 +23,6 @@ Mappings:
     us-east-2:
       rhel75: "ami-03291866"
 
-Tags:
-########
-  Key: "kubernetes.io/cluster/INSERT-CLUSTERID"
-  Value: "owned"
-
 Resources:
 ##########
   openshiftvpc:
@@ -37,12 +32,13 @@ Resources:
       EnableDnsSupport: true
       EnableDnsHostnames: true
       Tags:
-        - Key: Name
-          Value: openshift-cf-vpc
+      - Key: Name
+        Value: openshift-cf-vpc
 
   internetgatewayos:
     Type: AWS::EC2::InternetGateway
-    Tags:
+    Properties:
+      Tags:
       - Key: Name
         Value: openshift-cf-ig
 
@@ -59,14 +55,14 @@ Resources:
       CidrBlock: 10.0.0.0/28
       AvailabilityZone: !Ref AvailabilityZone
       Tags:
-        - Key: Name
-          Value: openshift-cf-subnet
+      - Key: Name
+        Value: openshift-cf-subnet
 
   routetable:
     Type: 'AWS::EC2::RouteTable'
     Properties:
       VpcId: !Ref openshiftvpc
-    Tags:
+      Tags:
       - Key: Name
         Value: openshift-cf-routetable
 
