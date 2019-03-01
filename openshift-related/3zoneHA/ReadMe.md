@@ -14,6 +14,12 @@
 3. Master disks - etcd
 4. Infrastructure and Worker Nodes - NA just common disks
 
+
+## Validating CF Template (after producing from whatever means ex:troposphere/boto etc):
+```
+aws cloudformation validate-template --template-body file://ec2WithSecGroups.yaml
+```
+
 ## Security Groups
 ### Core
 ![Alt text](core.png?raw=true "")
