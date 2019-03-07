@@ -272,6 +272,46 @@
         }
       }
     },
+    "InboundRuleForInfraNodesESAPI": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "IpProtocol": "tcp",
+        "ToPort": 9200,
+        "FromPort": 9200,
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "InfrastructureSG",
+            "GroupId"
+          ]
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "InfrastructureSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "InboundRuleForInfraNodesESInterMember": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "IpProtocol": "tcp",
+        "ToPort": 9300,
+        "FromPort": 9300,
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "InfrastructureSG",
+            "GroupId"
+          ]
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "InfrastructureSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
     "InboundRuleForInfraNodesHTTP": {
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
