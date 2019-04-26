@@ -6,6 +6,12 @@ Parameters:
     Default: production
     Description: The name of the parent Fargate networking stack that you created. Necessary
                  to locate and reference resources created by that stack.
+
+  Region:
+    Type: String
+    Default: us-east-1
+    Description: AWS Region
+
   ServiceName:
     Type: String
     Default: nginx
@@ -80,6 +86,12 @@ Resources:
           Image: !Ref 'ImageUrl'
           PortMappings:
             - ContainerPort: !Ref 'ContainerPort'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Ref 'ServiceName',
+              awslogs-region: !Ref 'Region',
+              awslogs-stream-prefix: !Ref 'ServiceName'
 
   # The service. The service is a resource which allows you to run multiple
   # copies of a type of task, and gather up their logs and metrics, as well
