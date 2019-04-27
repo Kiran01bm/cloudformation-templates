@@ -1,0 +1,30 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Mappings": {},
+  "Parameters": {
+    "RepositoryName": {
+      "Type": "String",
+      "Description": "Enter the repository name - Convention is to use the Service Name here"
+    }
+  },
+  "Resources": {
+    "ECRRepository": {
+      "Type": "AWS::ECR::Repository",
+      "Properties": {
+        "RepositoryName": {
+          "Ref": "RepositoryName"
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "Arn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "ECRRepository",
+          "Arn"
+        ]
+      }
+    }
+  }
+}
