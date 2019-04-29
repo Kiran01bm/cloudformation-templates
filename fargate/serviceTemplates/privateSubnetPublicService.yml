@@ -88,8 +88,8 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !Ref 'ServiceName',
-              awslogs-region: !Ref 'Region',
+              awslogs-group: !Ref 'ServiceName'
+              awslogs-region: !Ref 'Region'
               awslogs-stream-prefix: !Ref 'ServiceName'
                    
 

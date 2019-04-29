@@ -89,8 +89,8 @@ Resources:
           LogConfiguration:
             LogDriver: awslogs
             Options:
-              awslogs-group: !Ref 'ServiceName',
-              awslogs-region: !Ref 'Region',
+              awslogs-group: !Ref 'ServiceName'
+              awslogs-region: !Ref 'Region'
               awslogs-stream-prefix: !Ref 'ServiceName'
 
   # The service. The service is a resource which allows you to run multiple
