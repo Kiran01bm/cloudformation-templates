@@ -1,0 +1,46 @@
+[
+    {
+      "ParameterKey": "FargateClusterName",
+      "ParameterValue": "FargateCluster"
+    },
+    {
+      "ParameterKey": "FarGateServiceName",
+      "ParameterValue": "tracker-domain-cargo"
+    },
+    {
+      "ParameterKey": "CodeCommitRepoURL",
+      "ParameterValue": "https://git-codecommit.us-east-1.amazonaws.com/v1/repos/tracker-domain-cargo"
+    },
+    {
+      "ParameterKey": "CodeCommitRepoName",
+      "ParameterValue": "tracker-domain-cargo"
+    },
+    {
+      "ParameterKey": "CodeCommitBranchName",
+      "ParameterValue": "master"
+    },
+    {
+      "ParameterKey": "CodeBuildProjectName",
+      "ParameterValue": "tracker-domain-cargo"
+    },
+    {
+      "ParameterKey": "CodeBuildServiceIAMRole",
+      "ParameterValue": "arn:aws:iam::ACCOUNT_ID:role/custom-codebuild-service-role"
+    },
+    {
+      "ParameterKey": "ECRRepoName",
+      "ParameterValue": "tracker-domain-cargo"
+    },
+    {
+      "ParameterKey": "CodePipelineName",
+      "ParameterValue": "tracker-domain-cargo"
+    },
+    {
+      "ParameterKey": "CodePipelineServiceIAMRole",
+      "ParameterValue": "arn:aws:iam::ACCOUNT_ID:role/service-role/AWSCodePipelineServiceRole-us-east-1-fargate-can-service"
+    },
+    {
+      "ParameterKey": "ArtifactStoreLocationInS3",
+      "ParameterValue": "codepipeline-us-east-1-543047892827"
+    }
+  ]

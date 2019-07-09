@@ -1,0 +1,56 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Mappings": {},
+  "Parameters": {
+    "RepositoryName": {
+      "Type": "String",
+      "Description": "Enter the repository name - Convention is to use the Service Name here"
+    },"QAAccountArn": {
+      "Type": "String",
+      "Description": "QA Account ARN ex: arn:aws:iam::INSERT_QA_ACCOUNT:user/root"
+    },"ProdAccountArn": {
+      "Type": "String",
+      "Description": "QA Account ARN ex: arn:aws:iam::INSERT_PROD_ACCOUNT:user/root"
+    }
+  },
+  "Resources": {
+    "ECRRepository": {
+      "Type": "AWS::ECR::Repository",
+      "Properties": {
+        "RepositoryName": {
+          "Ref": "RepositoryName"
+        },
+        "RepositoryPolicyText": {
+          "Version": "2008-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowPushPull",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": [
+                    {"Ref": "QAAccountArn"},
+                    {"Ref": "ProdAccountArn"}
+                ]
+              },
+              "Action": [
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:BatchGetImage",
+                "ecr:BatchCheckLayerAvailability"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "Arn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "ECRRepository",
+          "Arn"
+        ]
+      }
+    }
+  }
+}

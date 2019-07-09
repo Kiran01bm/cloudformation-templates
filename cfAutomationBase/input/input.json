@@ -1,0 +1,28 @@
+{
+	"name": "CF Automation Base",
+	"clusters": [
+		{
+		  "cluster": {
+			"stack_name": "fargate-cluster",
+			"template_name": "fargateClusterTemplates/fargateCluster.json",
+			"params_name": "fargateClusterParams/fargateClusterParams.json"
+		  }
+		}
+	  ],
+	"services": [
+	  {
+		"service": {
+		  "stack_name": "fargate-can-service",
+		  "template_name": "fargateServiceTemplates/privateSubnetPublicService.json",
+		  "params_name": "fargateServiceParams/fargate-can-service-parameters.json"
+		}
+	  }
+	],
+	"functions": [
+	  {
+		"function": {
+		  "function_name": "fargate-can-service"
+		}
+	  }
+	]
+}

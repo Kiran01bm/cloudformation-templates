@@ -1,0 +1,42 @@
+[
+    {
+      "ParameterKey": "StackName",
+      "ParameterValue": "fargate-cluster"
+    },
+    {
+      "ParameterKey": "ServiceName",
+      "ParameterValue": "tracker-domain-cargo"
+    },
+    {
+      "ParameterKey": "ImageUrl",
+      "ParameterValue": "ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/tracker-domain-cargo:latest"
+    },
+    {
+      "ParameterKey": "ContainerPort",
+      "ParameterValue": "3000"
+    },
+    {
+      "ParameterKey": "ContainerCpu",
+      "ParameterValue": "256"
+    },
+    {
+      "ParameterKey": "ContainerMemory",
+      "ParameterValue": "512"
+    },
+    {
+      "ParameterKey": "Path",
+      "ParameterValue": "/tracker/*"
+    },
+    {
+      "ParameterKey": "Priority",
+      "ParameterValue": "1"
+    },
+    {
+      "ParameterKey": "DesiredCount",
+      "ParameterValue": "2"
+    },
+    {
+      "ParameterKey": "Role",
+      "ParameterValue": "arn:aws:iam::ACCOUNT_ID:role/ECSTaskExecutionRole"
+    }
+  ]

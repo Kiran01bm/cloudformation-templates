@@ -1,0 +1,40 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Mappings": {},
+    "Parameters": {
+      "DomainName": {
+        "Type": "String",
+        "Default": "api.domain.com.com",
+        "Description": "Name of the Domain to which certificates need to be issued"
+      },
+      "ValidationDomainName": {
+        "Type": "String",
+        "Default": "domain.com.com",
+        "Description": "Name of the Domain to which certificates need to be issued"
+      }
+    },
+    "Resources": {
+      "Certificate": {
+        "Type": "AWS::CertificateManager::Certificate",
+        "Properties": {
+          "DomainName": { "Ref": "DomainName" },
+          "DomainValidationOptions": [
+            {
+              "DomainName": {
+                "Ref": "DomainName"
+              },
+              "ValidationDomain": {
+                "Ref": "ValidationDomainName"
+              }
+            }
+          ],
+          "SubjectAlternativeNames": [
+            {
+              "Ref": "DomainName"
+            }
+          ],
+          "ValidationMethod": "EMAIL"
+        }
+      }
+    }
+  }

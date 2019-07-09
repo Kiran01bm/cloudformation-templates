@@ -1,0 +1,14 @@
+[
+    {
+      "ParameterKey": "RepositoryName",
+      "ParameterValue": "Insert a description from a Business perspective"
+    },
+    {
+        "ParameterKey": "QAAccountArn",
+        "ParameterValue": "Insert a description from a Business perspective"
+    },
+    {
+        "ParameterKey": "ProdAccountArn",
+        "ParameterValue": "Insert a description from a Business perspective"
+    }
+]

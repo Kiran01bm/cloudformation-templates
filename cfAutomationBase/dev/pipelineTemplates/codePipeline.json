@@ -1,0 +1,250 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Mappings": {},
+  "Parameters": {
+    "FargateClusterName": {
+      "Type": "String",
+      "Default": "FargateCluster",
+      "Description": "Name of the Fargate Cluster"
+    },
+    "FarGateServiceName": {
+      "Type": "String",
+      "Description": "Enter the name of the fargate service",
+      "Default": "fargate-can-service"
+    },
+    "CodeCommitRepoURL": {
+      "Type": "String",
+      "Description": "https://git-codecommit.us-east-1.amazonaws.com/v1/repos/fargate-can-service",
+      "Default": "https://git-codecommit.us-east-1.amazonaws.com/v1/repos/fargate-can-service"
+    },
+    "ArtifactStoreLocationInS3": {
+      "Type": "String",
+      "Description": "codepipeline-us-east-1-543047892827",
+      "Default": "codepipeline-us-east-1-543047892827"
+    },
+    "CodePipelineServiceIAMRole": {
+      "Type": "String",
+      "Description": "arn:aws:iam::ACCOUNT_ID:policy/GenericECSCodePipelineRole",
+      "Default": "arn:aws:iam::ACCOUNT_ID:role/service-role/AWSCodePipelineServiceRole-us-east-1-fargate-can-service"
+    },
+    "ECRRepoName": {
+      "Type": "String",
+      "Description": "fargate-can-service",
+      "Default": "fargate-can-service"
+    },
+    "CodeCommitRepoName": {
+      "Type": "String",
+      "Description": "fargate-can-service",
+      "Default": "fargate-can-service"
+    },
+    "CodeCommitBranchName": {
+      "Type": "String",
+      "Description": "master",
+      "Default": "master"
+    },
+    "CodeBuildProjectName": {
+      "Type": "String",
+      "Description": "fargate-can-service",
+      "Default": "fargate-can-service"
+    },
+    "CodeBuildServiceIAMRole": {
+      "Type": "String",
+      "Description": "arn:aws:iam::ACCOUNT_ID:role/custom-codebuild-service-role",
+      "Default": "arn:aws:iam::ACCOUNT_ID:role/custom-codebuild-service-role"
+    },
+    "CodePipelineName": {
+      "Type": "String",
+      "Description": "fargate-can-service",
+      "Default": "fargate-can-service"
+    }
+  },
+  "Resources": {
+    "CodeBuildProject": {
+      "Type": "AWS::CodeBuild::Project",
+      "Properties": {
+        "Name": {
+          "Ref": "CodeBuildProjectName"
+        },
+        "Description": "A description about my project",
+        "ServiceRole": {
+          "Ref": "CodeBuildServiceIAMRole"
+        },
+        "Artifacts": {
+          "Type": "no_artifacts"
+        },
+        "Environment": {
+          "ComputeType": "BUILD_GENERAL1_SMALL",
+          "PrivilegedMode": true,
+          "Image": "aws/codebuild/docker:17.09.0",
+          "Type": "LINUX_CONTAINER",
+          "EnvironmentVariables": [
+            {
+              "Type": "PLAINTEXT",
+              "Name": "AWS_DEFAULT_REGION",
+              "Value": {
+                "Fn::Sub": "${AWS::Region}"
+              }
+            },
+            {
+              "Type": "PLAINTEXT",
+              "Name": "AWS_ACCOUNT_ID",
+              "Value": {
+                "Fn::Sub": "${AWS::AccountId}"
+              }
+            },
+            {
+              "Type": "PLAINTEXT",
+              "Name": "IMAGE_REPO_NAME",
+              "Value": {
+                "Ref": "ECRRepoName"
+              }
+            },
+            {
+              "Type": "PLAINTEXT",
+              "Name": "IMAGE_TAG",
+              "Value": "latest"
+            }
+          ]
+        },
+        "Source": {
+          "InsecureSsl": false,
+          "Type": "CODECOMMIT",
+          "Location": {
+            "Ref": "CodeCommitRepoURL"
+          }
+        },
+        "TimeoutInMinutes": 10,
+        "QueuedTimeoutInMinutes": 20,
+        "BadgeEnabled": false
+      }
+    },
+    "ServiceCodePipeline": {
+      "Type": "AWS::CodePipeline::Pipeline",
+      "Properties": {
+        "RoleArn": {
+          "Ref": "CodePipelineServiceIAMRole"
+        },
+        "Stages": [
+          {
+            "Name": "Source",
+            "Actions": [
+              {
+                "InputArtifacts": [],
+                "Name": "Source",
+                "Region": {
+                  "Fn::Sub": "${AWS::Region}"
+                },
+                "ActionTypeId": {
+                  "Category": "Source",
+                  "Owner": "AWS",
+                  "Version": "1",
+                  "Provider": "CodeCommit"
+                },
+                "OutputArtifacts": [
+                  {
+                    "Name": "SourceArtifact"
+                  }
+                ],
+                "Configuration": {
+                  "PollForSourceChanges": "false",
+                  "BranchName": {
+                    "Ref": "CodeCommitBranchName"
+                  },
+                  "RepositoryName": {
+                    "Ref": "CodeCommitRepoName"
+                  }
+                },
+                "RunOrder": 1
+              }
+            ]
+          },
+          {
+            "Name": "Build",
+            "Actions": [
+              {
+                "InputArtifacts": [
+                  {
+                    "Name": "SourceArtifact"
+                  }
+                ],
+                "Name": "Build",
+                "Region": {
+                  "Fn::Sub": "${AWS::Region}"
+                },
+                "ActionTypeId": {
+                  "Category": "Build",
+                  "Owner": "AWS",
+                  "Version": "1",
+                  "Provider": "CodeBuild"
+                },
+                "OutputArtifacts": [
+                  {
+                    "Name": "BuildArtifact"
+                  }
+                ],
+                "Configuration": {
+                  "ProjectName": {
+                    "Ref": "CodeBuildProjectName"
+                  }
+                },
+                "RunOrder": 1
+              }
+            ]
+          },
+          {
+            "Name": "Deploy",
+            "Actions": [
+              {
+                "InputArtifacts": [
+                  {
+                    "Name": "BuildArtifact"
+                  }
+                ],
+                "Name": "Deploy",
+                "Region": {
+                  "Fn::Sub": "${AWS::Region}"
+                },
+                "ActionTypeId": {
+                  "Category": "Deploy",
+                  "Owner": "AWS",
+                  "Version": "1",
+                  "Provider": "ECS"
+                },
+                "OutputArtifacts": [],
+                "Configuration": {
+                  "ClusterName": {
+                    "Ref": "FargateClusterName"
+                  },
+                  "ServiceName": {
+                    "Ref": "FarGateServiceName"
+                  },
+                  "FileName": "imagedefinitions.json"
+                },
+                "RunOrder": 1
+              }
+            ]
+          }
+        ],
+        "ArtifactStore": {
+          "Type": "S3",
+          "Location": {
+            "Ref": "ArtifactStoreLocationInS3"
+          }
+        },
+        "Name": {
+          "Ref": "CodePipelineName"
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "CodeBuildProjectARN": {
+      "Value": {
+        "Fn::GetAtt": [
+          "CodeBuildProject",
+          "Arn"
+        ]
+      }
+    }
+  }
+}

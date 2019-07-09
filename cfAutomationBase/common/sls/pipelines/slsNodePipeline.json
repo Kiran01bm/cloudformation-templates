@@ -1,0 +1,489 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Parameters": {
+      "ArtifactStoreLocationInS3": {
+        "Type": "String",
+        "Description": "S3 bucket name for artifacts",
+        "Default": "codepipeline-us-east-1-543047892827"
+      },
+      "CodePipelineName": {
+        "Type": "String",
+        "Description": "Name of the Pipeline",
+        "Default": "tracker-domain-sls"
+      },
+      "CodePipelineServiceIAMRole": {
+        "Type": "String",
+        "Description": "IAM Role to be used by CodePipeline",
+        "Default": "arn:aws:iam::ACCOUNT_ID:role/AWS-CodePipeline-Service"
+      },
+      "CodeCommitRepoURL": {
+        "Type": "String",
+        "Description": "URL for Source Code Repo",
+        "Default": "https://git-codecommit.us-east-1.amazonaws.com/v1/repos/tracker-domain-sls"
+      },
+      "CodeCommitRepoName": {
+        "Type": "String",
+        "Description": "Name of the Source Code Repo",
+        "Default": "tracker-domain-sls"
+      },
+      "CodeCommitBranchName": {
+        "Type": "String",
+        "Description": "Source Code branch name",
+        "Default": "master"
+      },
+      "CodeBuildProjectNamePrefix": {
+        "Type": "String",
+        "Description": "Prefix for CodeBuild Projects ex: $CodeBuildProjectNamePrefix-dev, $CodeBuildProjectNamePrefix-test and $CodeBuildProjectNamePrefix-prod projects will be created",
+        "Default": "tracker-domain-sls"
+      },
+      "CodeBuildImageArn": {
+        "Type": "String",
+        "Description": "Image to be used for CodeBuild",
+        "Default": "ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/watewar-node-sls:alpine"
+      }
+    },
+    "Resources": {
+      "CodeBuildServiceIAMRole": {
+        "Description": "CodeBuild Service Role in IAM",
+        "Properties": {
+          "AssumeRolePolicyDocument": {
+            "Statement": [
+              {
+                "Action": "sts:AssumeRole",
+                "Effect": "Allow",
+                "Principal": {
+                  "Service": [
+                    "codebuild.amazonaws.com"
+                  ]
+                }
+              }
+            ]
+          },
+          "Path": "/",
+          "Policies": [
+            {
+              "PolicyDocument": {
+                "Statement": [
+                  {
+                    "Action": [
+                      "codecommit:GitPull",
+                      "ecr:GetAuthorizationToken",
+                      "ecr:BatchCheckLayerAvailability",
+                      "ecr:GetDownloadUrlForLayer",
+                      "ecr:GetRepositoryPolicy",
+                      "ecr:DescribeRepositories",
+                      "ecr:ListImages",
+                      "ecr:DescribeImages",
+                      "ecr:BatchGetImage",
+                      "ecr:InitiateLayerUpload",
+                      "ecr:UploadLayerPart",
+                      "ecr:CompleteLayerUpload",
+                      "ecr:PutImage",
+                      "s3:*",
+                      "s3:PutObject",
+                      "s3:GetObject",
+                      "s3:GetObjectVersion",
+                      "s3:GetBucketAcl",
+                      "s3:GetBucketLocation",
+                      "logs:CreateLogGroup",
+                      "logs:CreateLogStream",
+                      "logs:PutLogEvents",
+                      "acm:ListCertificates",
+                      "apigateway:POST",
+                      "apigateway:GET",
+                      "apigateway:PATCH",
+                      "cloudformation:*",
+                      "codebuild:*",
+                      "cloudformation:*",
+                      "lambda:*",
+                      "cloudfront:UpdateDistribution",
+                      "iam:CreateRole",
+                      "iam:CreatePolicy",
+                      "iam:GetRole",
+                      "iam:DeleteRole",
+                      "iam:PutRolePolicy",
+                      "iam:PassRole",
+                      "iam:DeleteRolePolicy",
+                      "route53:ListHostedZones",
+                      "route53:ChangeResourceRecordSets",
+                      "route53:GetHostedZone",
+                      "route53:ListResourceRecordSets"
+                    ],
+                    "Effect": "Allow",
+                    "Resource": "*"
+                  }
+                ]
+              },
+              "PolicyName": {
+                "Fn::Sub": [
+                  "${projNamePrefix}-cbSvcPolicy",
+                  {
+                    "projNamePrefix": {
+                      "Ref": "CodeBuildProjectNamePrefix"
+                    }
+                  }
+                ]
+              }
+            }
+          ],
+          "RoleName": {
+            "Fn::Sub": [
+              "${projNamePrefix}-cbSvcRole",
+              {
+                "projNamePrefix": {
+                  "Ref": "CodeBuildProjectNamePrefix"
+                }
+              }
+            ]
+          }
+        },
+        "Type": "AWS::IAM::Role"
+      },
+      "CodeBuildProjectDev": {
+        "Type": "AWS::CodeBuild::Project",
+        "Properties": {
+          "Name": {
+            "Fn::Sub": [
+              "${projNamePrefix}-dev",
+              {
+                "projNamePrefix": {
+                  "Ref": "CodeBuildProjectNamePrefix"
+                }
+              }
+            ]
+          },
+          "Description": "Code Build Project for Development Env",
+          "ServiceRole": {
+            "Ref": "CodeBuildServiceIAMRole"
+          },
+          "Artifacts": {
+            "Type": "no_artifacts"
+          },
+          "Source": {
+            "InsecureSsl": false,
+            "Type": "CODECOMMIT",
+            "Location": {
+              "Ref": "CodeCommitRepoURL"
+            }
+          },
+          "LogsConfig": {
+            "CloudWatchLogs": {
+              "Status": "ENABLED",
+              "GroupName": "slscodebuild",
+              "StreamName": {
+                "Fn::Sub": [
+                  "${projNamePrefix}-dev",
+                  {
+                    "projNamePrefix": {
+                      "Ref": "CodeBuildProjectNamePrefix"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "Environment": {
+            "ComputeType": "BUILD_GENERAL1_SMALL",
+            "PrivilegedMode": true,
+            "Image": {
+              "Ref": "CodeBuildImageArn"
+            },
+            "Type": "LINUX_CONTAINER",
+            "EnvironmentVariables": [
+              {
+                "Type": "PLAINTEXT",
+                "Name": "AWS_DEFAULT_REGION",
+                "Value": {
+                  "Fn::Sub": "${AWS::Region}"
+                }
+              }
+            ],
+            "ImagePullCredentialsType": "SERVICE_ROLE"
+          },
+          "TimeoutInMinutes": 10,
+          "QueuedTimeoutInMinutes": 20,
+          "BadgeEnabled": false
+        }
+      },
+      "CodeBuildProjectTest": {
+        "Type": "AWS::CodeBuild::Project",
+        "Properties": {
+          "Name": {
+            "Fn::Sub": [
+              "${projNamePrefix}-test",
+              {
+                "projNamePrefix": {
+                  "Ref": "CodeBuildProjectNamePrefix"
+                }
+              }
+            ]
+          },
+          "Description": "Code Build Project for Test Env",
+          "ServiceRole": {
+            "Ref": "CodeBuildServiceIAMRole"
+          },
+          "Artifacts": {
+            "Type": "no_artifacts"
+          },
+          "Source": {
+            "InsecureSsl": false,
+            "Type": "CODECOMMIT",
+            "Location": {
+              "Ref": "CodeCommitRepoURL"
+            }
+          },
+          "LogsConfig": {
+            "CloudWatchLogs": {
+              "Status": "ENABLED",
+              "GroupName": "slscodebuild",
+              "StreamName": {
+                "Fn::Sub": [
+                  "${projNamePrefix}-test",
+                  {
+                    "projNamePrefix": {
+                      "Ref": "CodeBuildProjectNamePrefix"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "Environment": {
+            "ComputeType": "BUILD_GENERAL1_SMALL",
+            "PrivilegedMode": true,
+            "Image": {
+              "Ref": "CodeBuildImageArn"
+            },
+            "Type": "LINUX_CONTAINER",
+            "EnvironmentVariables": [
+              {
+                "Type": "PLAINTEXT",
+                "Name": "AWS_DEFAULT_REGION",
+                "Value": {
+                  "Fn::Sub": "${AWS::Region}"
+                }
+              }
+            ],
+            "ImagePullCredentialsType": "SERVICE_ROLE"
+          },
+          "TimeoutInMinutes": 10,
+          "QueuedTimeoutInMinutes": 20,
+          "BadgeEnabled": false
+        }
+      },
+      "CodeBuildProjectProd": {
+        "Type": "AWS::CodeBuild::Project",
+        "Properties": {
+          "Name": {
+            "Fn::Sub": [
+              "${projNamePrefix}-prod",
+              {
+                "projNamePrefix": {
+                  "Ref": "CodeBuildProjectNamePrefix"
+                }
+              }
+            ]
+          },
+          "Description": "Code Build Project for Production Env",
+          "ServiceRole": {
+            "Ref": "CodeBuildServiceIAMRole"
+          },
+          "Artifacts": {
+            "Type": "no_artifacts"
+          },
+          "Source": {
+            "InsecureSsl": false,
+            "Type": "CODECOMMIT",
+            "Location": {
+              "Ref": "CodeCommitRepoURL"
+            }
+          },
+          "LogsConfig": {
+            "CloudWatchLogs": {
+              "Status": "ENABLED",
+              "GroupName": "slscodebuild",
+              "StreamName": {
+                "Fn::Sub": [
+                  "${projNamePrefix}-prod",
+                  {
+                    "projNamePrefix": {
+                      "Ref": "CodeBuildProjectNamePrefix"
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          "Environment": {
+            "ComputeType": "BUILD_GENERAL1_SMALL",
+            "PrivilegedMode": true,
+            "Image": {
+              "Ref": "CodeBuildImageArn"
+            },
+            "Type": "LINUX_CONTAINER",
+            "EnvironmentVariables": [
+              {
+                "Type": "PLAINTEXT",
+                "Name": "AWS_DEFAULT_REGION",
+                "Value": {
+                  "Fn::Sub": "${AWS::Region}"
+                }
+              }
+            ],
+            "ImagePullCredentialsType": "SERVICE_ROLE"
+          },
+          "TimeoutInMinutes": 10,
+          "QueuedTimeoutInMinutes": 20,
+          "BadgeEnabled": false
+        }
+      },
+      "SlsNodePipeline": {
+        "Type": "AWS::CodePipeline::Pipeline",
+        "Properties": {
+          "RoleArn": {
+            "Ref": "CodePipelineServiceIAMRole"
+          },
+          "Stages": [
+            {
+              "Name": "Source",
+              "Actions": [
+                {
+                  "Name": "Source",
+                  "ActionTypeId": {
+                    "Category": "Source",
+                    "Owner": "AWS",
+                    "Version": "1",
+                    "Provider": "CodeCommit"
+                  },
+                  "OutputArtifacts": [
+                    {
+                      "Name": "SourceArtifact"
+                    }
+                  ],
+                  "Configuration": {
+                    "PollForSourceChanges": "true",
+                    "BranchName": {
+                      "Ref": "CodeCommitBranchName"
+                    },
+                    "RepositoryName": {
+                      "Ref": "CodeCommitRepoName"
+                    }
+                  },
+                  "RunOrder": 1
+                }
+              ]
+            },
+            {
+              "Name": "Deploy_To_Dev",
+              "Actions": [
+                {
+                  "InputArtifacts": [
+                    {
+                      "Name": "SourceArtifact"
+                    }
+                  ],
+                  "Name": "Deploy_To_Dev",
+                  "ActionTypeId": {
+                    "Category": "Build",
+                    "Owner": "AWS",
+                    "Version": "1",
+                    "Provider": "CodeBuild"
+                  },
+                  "OutputArtifacts": [],
+                  "Configuration": {
+                    "ProjectName": {
+                      "Fn::Sub": [
+                        "${projNamePrefix}-dev",
+                        {
+                          "projNamePrefix": {
+                            "Ref": "CodeBuildProjectNamePrefix"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "RunOrder": 2
+                }
+              ]
+            },
+            {
+              "Name": "Deploy_To_Test",
+              "Actions": [
+                {
+                  "InputArtifacts": [
+                    {
+                      "Name": "SourceArtifact"
+                    }
+                  ],
+                  "Name": "Deploy_To_Test",
+                  "ActionTypeId": {
+                    "Category": "Build",
+                    "Owner": "AWS",
+                    "Version": "1",
+                    "Provider": "CodeBuild"
+                  },
+                  "OutputArtifacts": [],
+                  "Configuration": {
+                    "ProjectName": {
+                      "Fn::Sub": [
+                        "${projNamePrefix}-test",
+                        {
+                          "projNamePrefix": {
+                            "Ref": "CodeBuildProjectNamePrefix"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "RunOrder": 3
+                }
+              ]
+            },
+            {
+              "Name": "Deploy_To_Prod",
+              "Actions": [
+                {
+                  "InputArtifacts": [
+                    {
+                      "Name": "SourceArtifact"
+                    }
+                  ],
+                  "Name": "Deploy_To_Prod",
+                  "ActionTypeId": {
+                    "Category": "Build",
+                    "Owner": "AWS",
+                    "Version": "1",
+                    "Provider": "CodeBuild"
+                  },
+                  "OutputArtifacts": [],
+                  "Configuration": {
+                    "ProjectName": {
+                      "Fn::Sub": [
+                        "${projNamePrefix}-prod",
+                        {
+                          "projNamePrefix": {
+                            "Ref": "CodeBuildProjectNamePrefix"
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "RunOrder": 4
+                }
+              ]
+            }
+          ],
+          "ArtifactStore": {
+            "Type": "S3",
+            "Location": {
+              "Ref": "ArtifactStoreLocationInS3"
+            }
+          },
+          "Name": {
+            "Ref": "CodePipelineName"
+          }
+        }
+      }
+    }
+  }
+  
