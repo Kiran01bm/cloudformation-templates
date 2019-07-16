@@ -3,9 +3,15 @@
 
 ## ec2WithSecGroups.yaml
 1. This is for 3 zone deployment.
-2. Validated on us-east-2
-3. Update Bastion CIDR i.e inboundCIDRRangeIPv4 for Public vs Private Network Deployment
+2. Validated on us-east-2.
+3. Update Bastion CIDR i.e inboundCIDRRangeIPv4 for Public vs Private Network Deployment.
 4. Micorsegmentation in the form on fine grained Role based SG's
+
+## computeWithoutBastion.json
+1. This is for 3 zone deployment.
+2. Validated on us-east-2.
+3. Encryption as rest with EBS volumes encrypted with Customer Managed keys.
+4. Micorsegmentation in the form on fine grained Role based SG's.
 
 
 ## VM Storage
