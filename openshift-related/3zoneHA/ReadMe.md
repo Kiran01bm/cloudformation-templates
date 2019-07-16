@@ -1,7 +1,7 @@
 # Repo for OCP CF Templates which are HA i.e multi-zone deployments
 
 
-## ec2WithSecGroups.yaml
+## ec2WithSecGroups.json
 1. This is for 3 zone deployment.
 2. Validated on us-east-2.
 3. Update Bastion CIDR i.e inboundCIDRRangeIPv4 for Public vs Private Network Deployment.
