@@ -1,0 +1,1819 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Mappings": {
+    "AWSRegion2AZ": {
+      "us-east-2": {
+        "1": "us-east-2a",
+        "2": "us-east-2b",
+        "3": "us-east-2c"
+      }
+    }
+  },
+  "Parameters": {
+    "EnvId": {
+      "Type": "String",
+      "Description": "Specify a short Enviornment identifier ex: ENG for Engineering",
+"Default":"ENG"
+    },
+    "MasterInstanceType": {
+      "Type": "String",
+      "Description": "Select Instance type for OpenShift Master",
+"Default":"m4.xlarge"
+    },
+    "InfrastructureInstanceType": {
+      "Type": "String",
+      "Description": "Select Instance type for OpenShift Infrastructure and Application Nodes",
+"Default":"m4.xlarge"
+    },
+    "NodeInstanceType": {
+      "Type": "String",
+      "Description": "Select Instance type for OpenShift Infrastructure and Application Nodes",
+"Default":"m4.xlarge"
+    },
+    "Ec2RootVolumeSize": {
+      "Type": "String",
+      "Description": "Select volume size for Root Volume",
+"Default":"30"
+    },
+    "VPCId": {
+      "Type": "String",
+      "Description": "Select the VPC Id",
+"Default":"vpc-0000000000"
+    },
+    "SubnetIdAZ1": {
+      "Type": "String",
+      "Description": "Select a Subnet Id from AZ1",
+"Default":"subnet-000000000"
+    },
+    "SubnetIdAZ2": {
+      "Type": "String",
+      "Description": "Select a Subnet Id from AZ2",
+"Default":"subnet-000000000"
+    },
+    "SubnetIdAZ3": {
+      "Type": "String",
+      "Description": "Select a Subnet Id from AZ3",
+"Default":"subnet-000000000"
+    },
+    "KeyName": {
+      "Type": "String",
+      "Description": "Select ssh key name",
+"Default":"OpenShift_Key"
+    },
+    "AMIId": {
+      "Type": "String",
+      "Description": "Select a RHEL AMI with an Encrypted EBS Root Device",
+"Default":"ami-000000000"
+    },
+    "iamInstanceProfile": {
+      "Type": "String",
+      "Description": "Select a IAM Instance Profile",
+"Default":"InstanceProfile"
+    },
+    "outboundCIDRRangeIPv4": {
+      "Type": "String",
+"Default":"0.0.0.0/0"
+    },
+    "inboundCIDRRangeIPv4": {
+      "Type": "String",
+"Default":"10.0.0.0/8"
+    },
+"clusterId": {
+      "Type": "String",
+"Default":"stretchCluster"
+    },
+"EBSEncryptionKeyId": {
+      "Type": "String",
+"Default":"arn:aws:kms:region:000000000:key/000000000"
+    }
+  },
+  "Resources": {
+    "OpenShiftMaster1": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "1"
+          ]
+        },
+        "ImageId": {
+          "Ref": "AMIId"
+        },
+        "IamInstanceProfile" : {
+          "Ref" : "iamInstanceProfile"
+        },
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "InstanceType": {
+          "Ref": "MasterInstanceType"
+        },
+        "NetworkInterfaces": [
+          {
+            "DeviceIndex": "0",
+            "GroupSet": [
+              {
+                "Ref": "MasterSG"
+              },
+              {
+                "Ref": "NodeSG"
+              }
+            ],
+            "SubnetId": {
+              "Ref": "SubnetIdAZ1"
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPMaster1"
+             }
+          },
+          {
+	    "Key": {
+                "Fn::Sub": "kubernetes.io/cluster/${clusterId}"
+            },
+            "Value": "owned"
+	  }
+        ]
+      }
+    },
+    "OpenShiftMaster1EtcdVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "30",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "1"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPMaster1 Ectd Vol"
+	    }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftMaster1EtcdVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftMaster1"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftMaster1EtcdVol"
+        },
+        "Device": "/dev/xvdbc"
+      }
+    },
+    "OpenShiftMaster1DockerVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "30",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "1"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+                "Fn::Sub": "${EnvId}-OCPMaster1 Docker Vol"
+	    }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftMaster1DockerVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftMaster1"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftMaster1DockerVol"
+        },
+        "Device": "/dev/xvdbb"
+      }
+    },
+    "OpenShiftMaster1OCPLocalVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "40",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "1"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+                "Fn::Sub": "${EnvId}-OCPMaster1 OpenShift Local Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftMaster1OCPLocalVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftMaster1"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftMaster1OCPLocalVol"
+        },
+        "Device": "/dev/xvdba"
+      }
+    },
+    "OpenShiftMaster2": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "2"
+          ]
+        },
+        "ImageId": {
+          "Ref": "AMIId"
+        },
+        "IamInstanceProfile" : {
+          "Ref" : "iamInstanceProfile"
+        },
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "InstanceType": {
+          "Ref": "MasterInstanceType"
+        },
+        "NetworkInterfaces": [
+          {
+            "DeviceIndex": "0",
+            "GroupSet": [
+              {
+                "Ref": "MasterSG"
+              },
+              {
+                "Ref": "NodeSG"
+              }
+            ],
+            "SubnetId": {
+              "Ref": "SubnetIdAZ2"
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPMaster2"
+            }
+          },
+          {
+	    "Key": {
+                "Fn::Sub": "kubernetes.io/cluster/${clusterId}"
+            },
+            "Value": "owned"
+	  }
+        ]
+      }
+    },
+    "OpenShiftMaster2EtcdVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "30",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "2"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPMaster2 Ectd Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftMaster2EtcdVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftMaster2"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftMaster2EtcdVol"
+        },
+        "Device": "/dev/xvdbc"
+      }
+    },
+    "OpenShiftMaster2DockerVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "30",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "2"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPMaster2 Docker Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftMaster2DockerVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftMaster2"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftMaster2DockerVol"
+        },
+        "Device": "/dev/xvdbb"
+      }
+    },
+    "OpenShiftMaster2OCPLocalVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "40",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "2"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": {
+                "Fn::Sub": "${EnvId}-OCPMaster2 OpenShift Local Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftMaster2OCPLocalVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftMaster2"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftMaster2OCPLocalVol"
+        },
+        "Device": "/dev/xvdba"
+      }
+    },
+    "OpenShiftMaster3": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "3"
+          ]
+        },
+        "ImageId": {
+          "Ref": "AMIId"
+        },
+        "IamInstanceProfile" : {
+          "Ref" : "iamInstanceProfile"
+        },
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "InstanceType": {
+          "Ref": "MasterInstanceType"
+        },
+        "NetworkInterfaces": [
+          {
+            "DeviceIndex": "0",
+            "GroupSet": [
+              {
+                "Ref": "MasterSG"
+              },
+              {
+                "Ref": "NodeSG"
+              }
+            ],
+            "SubnetId": {
+              "Ref": "SubnetIdAZ3"
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPMaster3"
+            }
+          },
+          {
+	    "Key": {
+                "Fn::Sub": "kubernetes.io/cluster/${clusterId}"
+            },
+            "Value": "owned"
+	  }
+        ]
+      }
+    },
+    "OpenShiftMaster3EtcdVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "30",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "3"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPMaster3 Ectd Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftMaster3EtcdVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftMaster3"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftMaster3EtcdVol"
+        },
+        "Device": "/dev/xvdbc"
+      }
+    },
+    "OpenShiftMaster3DockerVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "30",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "3"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPMaster3 Docker Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftMaster3DockerVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftMaster3"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftMaster3DockerVol"
+        },
+        "Device": "/dev/xvdbb"
+      }
+    },
+    "OpenShiftMaster3OCPLocalVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "40",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "3"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPMaster3 OpenShift Local Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftMaster3OCPLocalVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftMaster3"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftMaster3OCPLocalVol"
+        },
+        "Device": "/dev/xvdba"
+      }
+    },
+    "OpenShiftInfrastructure1": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "1"
+          ]
+        },
+        "ImageId": {
+          "Ref": "AMIId"
+        },
+        "IamInstanceProfile" : {
+          "Ref" : "iamInstanceProfile"
+        },
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "InstanceType": {
+          "Ref": "InfrastructureInstanceType"
+        },
+        "NetworkInterfaces": [
+          {
+            "DeviceIndex": "0",
+            "GroupSet": [
+              {
+                "Ref": "InfrastructureSG"
+              },
+              {
+                "Ref": "NodeSG"
+              }
+            ],
+            "SubnetId": {
+              "Ref": "SubnetIdAZ1"
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPInfrastructure1"
+            }
+          },
+          {
+	    "Key": {
+                "Fn::Sub": "kubernetes.io/cluster/${clusterId}"
+            },
+            "Value": "owned"
+	  }
+        ]
+      }
+    },
+    "OpenShiftInfrastructure1DockerVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "30",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "1"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPInfrastructure1 Docker Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftInfrastructure1DockerVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftInfrastructure1"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftInfrastructure1DockerVol"
+        },
+        "Device": "/dev/xvdbb"
+      }
+    },
+    "OpenShiftInfrastructure1OCPLocalVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "40",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "1"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPInfrastructure1 OpenShift Local Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftInfrastructure1OCPLocalVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftInfrastructure1"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftInfrastructure1OCPLocalVol"
+        },
+        "Device": "/dev/xvdba"
+      }
+    },
+    "OpenShiftInfrastructure2": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "2"
+          ]
+        },
+        "ImageId": {
+          "Ref": "AMIId"
+        },
+        "IamInstanceProfile" : {
+          "Ref" : "iamInstanceProfile"
+        },
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "InstanceType": {
+          "Ref": "InfrastructureInstanceType"
+        },
+        "NetworkInterfaces": [
+          {
+            "DeviceIndex": "0",
+            "GroupSet": [
+              {
+                "Ref": "InfrastructureSG"
+              },
+              {
+                "Ref": "NodeSG"
+              }
+            ],
+            "SubnetId": {
+              "Ref": "SubnetIdAZ2"
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPInfrastructure2"
+            }
+          },
+          {
+	    "Key": {
+                "Fn::Sub": "kubernetes.io/cluster/${clusterId}"
+            },
+            "Value": "owned"
+	  }
+        ]
+      }
+    },
+    "OpenShiftInfrastructure2DockerVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "30",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "2"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPInfrastructure2 Docker Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftInfrastructure2DockerVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftInfrastructure2"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftInfrastructure2DockerVol"
+        },
+        "Device": "/dev/xvdbb"
+      }
+    },
+    "OpenShiftInfrastructure2OCPLocalVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "40",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "2"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPInfrastructure2 OpenShift Local Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftInfrastructure2OCPLocalVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftInfrastructure2"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftInfrastructure2OCPLocalVol"
+        },
+        "Device": "/dev/xvdba"
+      }
+    },
+    "OpenShiftInfrastructure3": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "3"
+          ]
+        },
+        "ImageId": {
+          "Ref": "AMIId"
+        },
+        "IamInstanceProfile" : {
+          "Ref" : "iamInstanceProfile"
+        },
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "InstanceType": {
+          "Ref": "InfrastructureInstanceType"
+        },
+        "NetworkInterfaces": [
+          {
+            "DeviceIndex": "0",
+            "GroupSet": [
+              {
+                "Ref": "InfrastructureSG"
+              },
+              {
+                "Ref": "NodeSG"
+              }
+            ],
+            "SubnetId": {
+              "Ref": "SubnetIdAZ3"
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPInfrastructure3"
+            }
+          },
+          {
+	    "Key": {
+                "Fn::Sub": "kubernetes.io/cluster/${clusterId}"
+            },
+            "Value": "owned"
+	  }
+        ]
+      }
+    },
+    "OpenShiftInfrastructure3DockerVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "30",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "3"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPInfrastructure3 Docker Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftInfrastructure3DockerVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftInfrastructure3"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftInfrastructure3DockerVol"
+        },
+        "Device": "/dev/xvdbb"
+      }
+    },
+    "OpenShiftInfrastructure3OCPLocalVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "40",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "3"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPInfrastructure3 OpenShift Local Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftInfrastructure3OCPLocalVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftInfrastructure3"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftInfrastructure3OCPLocalVol"
+        },
+        "Device": "/dev/xvdba"
+      }
+    },
+    "OpenShiftNode1": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "1"
+          ]
+        },
+        "ImageId": {
+          "Ref": "AMIId"
+        },
+        "IamInstanceProfile" : {
+          "Ref" : "iamInstanceProfile"
+        },
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "InstanceType": {
+          "Ref": "NodeInstanceType"
+        },
+        "NetworkInterfaces": [
+          {
+            "DeviceIndex": "0",
+            "GroupSet": [
+              {
+                "Ref": "NodeSG"
+              }
+            ],
+            "SubnetId": {
+              "Ref": "SubnetIdAZ1"
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPWorker1"
+            }
+          },
+          {
+	    "Key": {
+                "Fn::Sub": "kubernetes.io/cluster/${clusterId}"
+            },
+            "Value": "owned"
+	  }
+        ]
+      }
+    },
+    "OpenShiftNode1DockerVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "30",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "1"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPNode1 Docker Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftNode1DockerVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftNode1"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftNode1DockerVol"
+        },
+        "Device": "/dev/xvdbb"
+      }
+    },
+    "OpenShiftNode1OCPLocalVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "40",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "1"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPNode1 OpenShift Local Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftNode1OCPLocalVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftNode1"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftNode1OCPLocalVol"
+        },
+        "Device": "/dev/xvdba"
+      }
+    },
+    "OpenShiftNode2": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "2"
+          ]
+        },
+        "ImageId": {
+          "Ref": "AMIId"
+        },
+        "IamInstanceProfile" : {
+          "Ref" : "iamInstanceProfile"
+        },
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "InstanceType": {
+          "Ref": "NodeInstanceType"
+        },
+        "NetworkInterfaces": [
+          {
+            "DeviceIndex": "0",
+            "GroupSet": [
+              {
+                "Ref": "NodeSG"
+              }
+            ],
+            "SubnetId": {
+              "Ref": "SubnetIdAZ2"
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPWorker2"
+            }
+          },
+          {
+	    "Key": {
+                "Fn::Sub": "kubernetes.io/cluster/${clusterId}"
+            },
+            "Value": "owned"
+	  }
+        ]
+      }
+    },
+    "OpenShiftNode2DockerVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "30",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "2"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPNode2 Docker Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftNode2DockerVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftNode2"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftNode2DockerVol"
+        },
+        "Device": "/dev/xvdbb"
+      }
+    },
+    "OpenShiftNode2OCPLocalVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "40",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "2"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPNode2 OpenShift Local Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftNode2OCPLocalVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftNode2"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftNode2OCPLocalVol"
+        },
+        "Device": "/dev/xvdba"
+      }
+    },
+    "OpenShiftNode3": {
+      "Type": "AWS::EC2::Instance",
+      "Properties": {
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "3"
+          ]
+        },
+        "ImageId": {
+          "Ref": "AMIId"
+        },
+        "IamInstanceProfile" : {
+          "Ref" : "iamInstanceProfile"
+        },
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "InstanceType": {
+          "Ref": "NodeInstanceType"
+        },
+        "NetworkInterfaces": [
+          {
+            "DeviceIndex": "0",
+            "GroupSet": [
+              {
+                "Ref": "NodeSG"
+              }
+            ],
+            "SubnetId": {
+              "Ref": "SubnetIdAZ3"
+            }
+          }
+        ],
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPWorker3"
+            }
+          },
+          {
+	    "Key": {
+                "Fn::Sub": "kubernetes.io/cluster/${clusterId}"
+            },
+            "Value": "owned"
+	  }
+        ]
+      }
+    },
+    "OpenShiftNode3DockerVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "30",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "3"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPNode3 Docker Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftNode3DockerVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftNode3"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftNode3DockerVol"
+        },
+        "Device": "/dev/xvdbb"
+      }
+    },
+    "OpenShiftNode3OCPLocalVol": {
+      "Type": "AWS::EC2::Volume",
+      "Properties": {
+        "VolumeType": "gp2",
+        "Size": "40",
+        "AvailabilityZone": {
+          "Fn::FindInMap": [
+            "AWSRegion2AZ",
+            {
+              "Ref": "AWS::Region"
+            },
+            "3"
+          ]
+        },
+        "Encrypted": "true",
+        "KmsKeyId": {
+          "Ref" : "EBSEncryptionKeyId"
+        },
+        "Tags": [
+          {
+            "Key": "Name",
+ 	    "Value": {
+                "Fn::Sub": "${EnvId}-OCPNode3 OpenShift Local Vol"
+            }
+          }
+        ]
+      },
+      "DeletionPolicy": "Retain"
+    },
+    "OpenShiftNode3OCPLocalVolAtt": {
+      "Type": "AWS::EC2::VolumeAttachment",
+      "Properties": {
+        "InstanceId": {
+          "Ref": "OpenShiftNode3"
+        },
+        "VolumeId": {
+          "Ref": "OpenShiftNode3OCPLocalVol"
+        },
+        "Device": "/dev/xvdba"
+      }
+    },
+    "MasterSG": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPCId"
+        },
+        "GroupDescription": "OpenShift Master Security Group"
+      }
+    },
+    "NodeSG": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPCId"
+        },
+        "Tags": [
+          {
+	    "Key": {
+                "Fn::Sub": "kubernetes.io/cluster/${clusterId}"
+            },
+            "Value": "owned"
+          }
+        ],
+        "GroupDescription": "OpenShift Node Security Group"
+      }
+    },
+    "InfrastructureSG": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "VpcId": {
+          "Ref": "VPCId"
+        },
+        "GroupDescription": "OpenShift Infrastructure Security Group"
+      }
+    },
+    "OutboundRuleMasterSG": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "IpProtocol": "tcp",
+        "ToPort": 65535,
+        "FromPort": 0,
+        "CidrIp": {
+          "Ref": "outboundCIDRRangeIPv4"
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "MasterSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "OutboundRuleNodeSG": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "IpProtocol": "-1",
+        "ToPort": 65535,
+        "FromPort": 0,
+        "CidrIp": {
+          "Ref": "outboundCIDRRangeIPv4"
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "NodeSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "OutboundRuleInfraSG": {
+      "Type": "AWS::EC2::SecurityGroupEgress",
+      "Properties": {
+        "IpProtocol": "tcp",
+        "ToPort": 65535,
+        "FromPort": 0,
+        "CidrIp": {
+          "Ref": "outboundCIDRRangeIPv4"
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "InfrastructureSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "InboundRuleForMasterAPIAndConsole": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "IpProtocol": "tcp",
+        "ToPort": 443,
+        "FromPort": 443,
+        "CidrIp": {
+          "Ref": "inboundCIDRRangeIPv4"
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "MasterSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "InboundRuleForNodesInternalNSTCP53": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "IpProtocol": "tcp",
+        "ToPort": 53,
+        "FromPort": 53,
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "NodeSG",
+            "GroupId"
+          ]
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "MasterSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "InboundRuleForNodesInternalNSUDP53": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "IpProtocol": "udp",
+        "ToPort": 53,
+        "FromPort": 53,
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "NodeSG",
+            "GroupId"
+          ]
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "MasterSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "InboundRuleForNodesInternalNSTCP8053": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "IpProtocol": "tcp",
+        "ToPort": 8053,
+        "FromPort": 8053,
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "NodeSG",
+            "GroupId"
+          ]
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "MasterSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "InboundRuleForNodesInternalNSUDP8053": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "IpProtocol": "udp",
+        "ToPort": 8053,
+        "FromPort": 8053,
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "NodeSG",
+            "GroupId"
+          ]
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "MasterSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "InboundRuleForMasterEtcdClientServer": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "IpProtocol": "tcp",
+        "ToPort": 2379,
+        "FromPort": 2379,
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "MasterSG",
+            "GroupId"
+          ]
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "MasterSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "InboundRuleForMasterEtcdInterServer": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "IpProtocol": "tcp",
+        "ToPort": 2380,
+        "FromPort": 2380,
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "MasterSG",
+            "GroupId"
+          ]
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "MasterSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "InboundRuleForInfraNodesHTTPS": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "IpProtocol": "tcp",
+        "ToPort": 443,
+        "FromPort": 443,
+        "CidrIp": {
+          "Ref": "inboundCIDRRangeIPv4"
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "InfrastructureSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "InboundRuleForInfraNodesESAPI": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "IpProtocol": "tcp",
+        "ToPort": 9200,
+        "FromPort": 9200,
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "InfrastructureSG",
+            "GroupId"
+          ]
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "InfrastructureSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "InboundRuleForInfraNodesESInterMember": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "IpProtocol": "tcp",
+        "ToPort": 9300,
+        "FromPort": 9300,
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "InfrastructureSG",
+            "GroupId"
+          ]
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "InfrastructureSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "InboundRuleForInfraNodesHTTP": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "IpProtocol": "tcp",
+        "ToPort": 80,
+        "FromPort": 80,
+        "CidrIp": {
+          "Ref": "inboundCIDRRangeIPv4"
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "InfrastructureSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "InboundRuleForNodesHTTPS": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "IpProtocol": "tcp",
+        "ToPort": 443,
+        "FromPort": 443,
+        "CidrIp": {
+          "Ref": "inboundCIDRRangeIPv4"
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "NodeSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "InboundRuleForNodesSSH": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "IpProtocol": "tcp",
+        "ToPort": 22,
+        "FromPort": 22,
+        "CidrIp": {
+          "Ref": "inboundCIDRRangeIPv4"
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "NodeSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "InboundRuleForNodesKubelet": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "IpProtocol": "tcp",
+        "ToPort": 10250,
+        "FromPort": 10250,
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "NodeSG",
+            "GroupId"
+          ]
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "NodeSG",
+            "GroupId"
+          ]
+        }
+      }
+    },
+    "InboundRuleForNodesSDN": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "IpProtocol": "udp",
+        "ToPort": 4789,
+        "FromPort": 4789,
+        "SourceSecurityGroupId": {
+          "Fn::GetAtt": [
+            "NodeSG",
+            "GroupId"
+          ]
+        },
+        "GroupId": {
+          "Fn::GetAtt": [
+            "NodeSG",
+            "GroupId"
+          ]
+        }
+      }
+    }
+  }
+}
