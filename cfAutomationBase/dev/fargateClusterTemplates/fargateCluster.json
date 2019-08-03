@@ -21,10 +21,10 @@
         }
     },
     "Parameters": {
-        "Desription": {
+        "ClusterName": {
             "Type": "String",
-            "Default": "This creates a fargate cluster by name fargate-cluster",
-            "Description": "This creates a fargate cluster by name fargate-cluster"
+            "Default": "myCluster",
+            "Description": "Provide a name for the cluster"
         }
     },
     "Resources": {
@@ -347,7 +347,9 @@
         "ECSCluster": {
           "Type": "AWS::ECS::Cluster",
           "Properties": {
-            "ClusterName": "myCluster"
+              "ClusterName": {
+               "Ref": "ClusterName"
+              }
           }
         },
         "FargateContainerSecurityGroup": {
