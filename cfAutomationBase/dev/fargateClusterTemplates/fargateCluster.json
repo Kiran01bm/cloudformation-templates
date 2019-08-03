@@ -345,7 +345,10 @@
             }
         },
         "ECSCluster": {
-            "Type": "AWS::ECS::Cluster"
+          "Type": "AWS::ECS::Cluster",
+          "Properties": {
+            "ClusterName": "myCluster"
+          }
         },
         "FargateContainerSecurityGroup": {
             "Type": "AWS::EC2::SecurityGroup",
