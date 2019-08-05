@@ -1,0 +1,10 @@
+[
+    {
+      "ParameterKey": "RepositoryName",
+      "ParameterValue": "Insert a description from a Business perspective"
+    },
+    {
+        "ParameterKey": "ToolsAccountArn",
+        "ParameterValue": "Account from which the cross account push happens. Typically this is the account where you have a pipeline with CodeBuild project doing Docker Push"
+    }
+]

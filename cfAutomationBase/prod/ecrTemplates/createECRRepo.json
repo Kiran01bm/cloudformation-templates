@@ -1,0 +1,58 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Mappings": {},
+  "Parameters": {
+    "RepositoryName": {
+      "Type": "String",
+      "Description": "Enter the repository name - Convention is to use the Service Name here"
+    },
+    "ToolsAccountArn": {
+      "Type": "String",
+      "Description": "Tools Account ARN ex: arn:aws:iam::INSERT_TOOLS_ACCOUNT_ID:user/root"
+    }
+  },
+  "Resources": {
+    "ECRRepository": {
+      "Type": "AWS::ECR::Repository",
+      "Properties": {
+        "RepositoryName": {
+          "Ref": "RepositoryName"
+        },
+        "RepositoryPolicyText": {
+          "Version": "2008-10-17",
+          "Statement": [
+            {
+              "Sid": "AllowCrossAccountPush",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": [
+                  {
+                    "Ref": "ToolsAccountArn"
+                  }
+                ]
+              },
+              "Action": [
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:CompleteLayerUpload",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:InitiateLayerUpload",
+                "ecr:PutImage",
+                "ecr:UploadLayerPart"
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "Arn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "ECRRepository",
+          "Arn"
+        ]
+      }
+    }
+  }
+}
